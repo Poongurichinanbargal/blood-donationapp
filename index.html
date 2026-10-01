@@ -308,10 +308,14 @@
       <button type="button" onclick="goTo('find'); closeMobileMenu();"><span>🔎</span><b>Find Donor</b></button>
       <button type="button" onclick="goTo('request'); closeMobileMenu();"><span>🚨</span><b>Blood Request</b></button>
       <button type="button" onclick="goTo('home'); setTimeout(scrollToCommunity,80); closeMobileMenu();"><span>👥</span><b>Donor Community</b></button>
+      <button type="button" onclick="openMyProfile(); closeMobileMenu();"><span>👤</span><b>My Profile</b></button>
+      <button type="button" onclick="openMyDonorIdCard(); closeMobileMenu();"><span>🪪</span><b>My ID Card</b></button>
+      <button type="button" onclick="openMyRequests(); closeMobileMenu();"><span>📋</span><b>My Requests</b></button>
       <button type="button" onclick="document.querySelector('.pn-self-update-btn')?.click(); closeMobileMenu();"><span>📅</span><b>Update Donation</b></button>
       <button type="button" onclick="openNotifications(); closeMobileMenu();"><span>🔔</span><b>Notifications</b></button>
       <button type="button" onclick="document.getElementById('pn-bot-toggle')?.click(); closeMobileMenu();"><span>🤖</span><b>PNBDC AI</b></button>
-      <button type="button" onclick="goTo('events'); closeMobileMenu();"><span>📍</span><b>Upcoming Camps</b></button>
+      <button type="button" onclick="openUpcomingCamps(); closeMobileMenu();"><span>📍</span><b>Upcoming Camps</b></button>
+      <button type="button" onclick="sharePNBDCApp(); closeMobileMenu();"><span>🔗</span><b>Share App</b></button>
       <button type="button" onclick="goTo('about'); closeMobileMenu();"><span>ℹ️</span><b>Help &amp; Support</b></button>
     </div>
     <div class="mobile-language-row">
@@ -1865,6 +1869,79 @@
 
 
     /* =========================================================
+       RESTORED MEMBER FEATURES
+       These use existing frontend/backend capabilities only.
+       No Google Sheet or Code.gs changes are required here.
+       ========================================================= */
+
+    function sharePNBDCApp() {
+      const shareData = {
+        title: "Poongurichi Nanbargal Blood Donors Club",
+        text: "Join Poongurichi Nanbargal Blood Donors Club and help save lives.",
+        url: window.location.href
+      };
+      if (navigator.share) {
+        navigator.share(shareData).catch(() => {});
+      } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(window.location.href).then(() => toast("App link copied successfully."));
+      } else {
+        toast(window.location.href);
+      }
+    }
+
+    function openUpcomingCamps() {
+      goTo("home");
+      setTimeout(() => {
+        const el = document.querySelector("#page-home .pn2-events, #page-home #eventsSection, #page-home .events-section");
+        if (el) el.scrollIntoView({behavior:"smooth", block:"start"});
+        else if (typeof showAllEvents === "function") showAllEvents();
+        else toast("Upcoming camps are shown on the Home page when available.");
+      }, 120);
+    }
+
+    function openMyProfile() {
+      const saved = (() => { try { return JSON.parse(localStorage.getItem("pnbdc_last_donor_profile") || "null"); } catch(e) { return null; } })();
+      if (saved && saved.name) {
+        toast("Saved donor profile: " + saved.name);
+        return;
+      }
+      goTo("donor");
+      setTimeout(() => toast("Please register as a donor to create your profile."), 120);
+    }
+
+    function openMyDonorIdCard() {
+      if (typeof downloadNewDonorIdCard === "function" && window.__NEW_DONOR_ID_CARD_FILE) {
+        downloadNewDonorIdCard();
+        return;
+      }
+      if (window.__NEW_DONOR_ID_CARD_FILE) {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(window.__NEW_DONOR_ID_CARD_FILE);
+        a.download = window.__NEW_DONOR_ID_CARD_FILE.name || "PNBDC_Donor_ID_Card.png";
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        return;
+      }
+      toast("Your ID Card is available after donor registration. Please register or use the Admin ID Card option.");
+    }
+
+    async function openMyRequests() {
+      try {
+        const requests = await window.BloodDonationAPI.getBloodRequests();
+        const mobile = prompt("Enter the contact number used in your blood request:");
+        if (!mobile) return;
+        const digits = String(mobile).replace(/\D/g, "");
+        const mine = requests.filter(r => String(r.contactNumber || r.Contact_Number || r.Contact_Mobile || r.Mobile || r.Phone || "").replace(/\D/g, "") === digits);
+        if (!mine.length) { toast("No blood requests found for this contact number."); return; }
+        const summary = mine.map(r => `${r.requestId || r.Request_ID || "Request"} • ${r.bloodGroup || r.Blood_Group || ""} • ${r.status || r.Status || "Pending"}`).join("\n");
+        alert("My Blood Requests\n\n" + summary);
+      } catch (error) {
+        console.error(error);
+        toast(error?.message || "Unable to load your requests.");
+      }
+    }
+
+    /* =========================================================
        NAVIGATION
        ========================================================= */
 
@@ -2894,6 +2971,16 @@
             }
 
             const registeredDonorId = registrationResult?.donorId || registrationResult?.Donor_ID || "";
+            try {
+              localStorage.setItem("pnbdc_last_donor_profile", JSON.stringify({
+                donorId: registeredDonorId,
+                name: String(form.elements.namedItem("Name")?.value || "").trim(),
+                mobile: String(form.elements.namedItem("Mobile")?.value || "").trim(),
+                savedAt: new Date().toISOString()
+              }));
+            } catch (profileStoreError) {
+              console.warn("PNBDC profile cache unavailable:", profileStoreError);
+            }
             if (registeredDonorId && __pendingDonorPhotoDataUrl) saveCachedDonorPhoto(registeredDonorId, __pendingDonorPhotoDataUrl);
             __pendingDonorPhotoDataUrl = "";
 
