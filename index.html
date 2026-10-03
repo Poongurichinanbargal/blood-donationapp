@@ -4016,113 +4016,509 @@
       return await new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error("Could not create PNG image.")),"image/png",1));
     }
 
-    async function createProfessionalDonorIdCard(donor) {
-      const name = String(value(donor,"Name","name") || "Donor").trim();
-      const donorId = String(value(donor,"Donor_ID","donorId","DonorID","ID","id") || "—").trim();
-      const blood = String(value(donor,"Blood_Group","bloodGroup","BloodGroup") || "—").trim();
-      const mobile = String(value(donor,"Mobile","mobile","Phone") || "—").trim();
-      const city = String(value(donor,"City","city") || "—").trim();
-      const district = String(value(donor,"District","district") || "—").trim();
-      const dob = dateOnly(value(donor,"DOB","dob"));
-      const donorIdForPhoto = String(value(donor,"Donor_ID","donorId","DonorID","ID","id") || "").trim();
-      const storedPhotoUrl = String(value(donor,"Photo_URL","photoUrl","PhotoURL","photoURL","Photo_Url") || "").trim();
-      const cachedPhoto = getCachedDonorPhoto(donorIdForPhoto);
-      let photoUrl = cachedPhoto || storedPhotoUrl;
-      if (!cachedPhoto && storedPhotoUrl) {
-        try {
-          const serverPhoto = await Promise.race([
-            BloodDonationAPI.getDonorPhotoData({ photoUrl: storedPhotoUrl }),
-            new Promise((_, reject) => setTimeout(() => reject(new Error("PHOTO_FETCH_TIMEOUT")), 25000))
-          ]);
-          if (serverPhoto && serverPhoto.success && serverPhoto.dataUrl) {
-            photoUrl = serverPhoto.dataUrl;
-            if (donorIdForPhoto) saveCachedDonorPhoto(donorIdForPhoto, photoUrl);
-          }
-        } catch (_) {}
-      }
+    /*
+ PNBDC — COMPLETE ID CARD GENERATOR REPLACEMENT
 
-      const cardLang = (typeof getDonorCardLanguage === "function") ? getDonorCardLanguage(donor) : getAppLanguage();
-      const ta = cardLang === "ta";
-      const t = ta ? {
-        club1:"பூங்குறிச்சி நண்பர்கள்",
-        club2:"இரத்த தான நன்கொடையாளர்கள் சங்கம்",
-        official:"அதிகாரப்பூர்வ நன்கொடையாளர் அடையாள அட்டை",
-        photo:"நன்கொடையாளர் புகைப்படம்",
-        blood:"இரத்த வகை",
-        id:"நன்கொடையாளர் ID",
-        mobile:"கைபேசி எண்",
-        dob:"பிறந்த தேதி",
-        location:"இடம்",
-        footer:"இரத்த தானம் செய்வோம் • உயிரைக் காப்போம் • ஹீரோவாக இருப்போம்"
-      } : {
-        club1:"POONGURICHI NANBARGAL",
-        club2:"BLOOD DONORS CLUB",
-        official:"OFFICIAL DONOR ID CARD",
-        photo:"DONOR PHOTO",
-        blood:"BLOOD GROUP",
-        id:"DONOR ID",
-        mobile:"MOBILE",
-        dob:"DATE OF BIRTH",
-        location:"LOCATION",
-        footer:"DONATE BLOOD • SAVE LIFE • BE A HERO"
-      };
+ Replace the existing createProfessionalDonorIdCard(donor) function with
+ this function. It keeps the existing donor data/API/photo logic and adds:
+   - Attached PNBDC logo: icons/poongurichi-logo.jpeg
+   - Full mobile number on the private donor ID card
+   - Working QR code containing only the donor profile URL
+   - Front + Back card in one mobile-friendly PNG (1200 x 1560)
+   - Emergency Contact: PNBDC Helpline Number : 97507 85555
+   - Back footer: Unit of Poongurichi Nanbargal
+   - Existing + new + duplicate donor flows continue to call the same function
 
-      const canvas = document.createElement("canvas");
-      canvas.width = 1200; canvas.height = 760;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("Your browser cannot generate the ID card.");
+ IMPORTANT:
+ The QR generator library is loaded only when the ID card is generated.
+ No Google Sheet / Apps Script / donor data structure changes are required.
+*/
 
-      const rr = (x,y,w,h,r,fill,stroke,sw=1) => { ctx.beginPath(); ctx.roundRect(x,y,w,h,r); if(fill){ctx.fillStyle=fill;ctx.fill();} if(stroke){ctx.lineWidth=sw;ctx.strokeStyle=stroke;ctx.stroke();} };
-      const fontFamily = '"Noto Sans Tamil","Nirmala UI","Latha",Arial,sans-serif';
-      const fitText = (text, maxWidth, startSize, weight=700) => {
-        let size = startSize;
-        while (size > 14) {
-          ctx.font = `${weight} ${size}px ${fontFamily}`;
-          if (ctx.measureText(String(text)).width <= maxWidth) break;
-          size -= 1;
+async function createProfessionalDonorIdCard(donor) {
+  const name = String(value(donor,"Name","name") || "Donor").trim();
+  const donorId = String(value(donor,"Donor_ID","donorId","DonorID","ID","id") || "—").trim();
+  const blood = String(value(donor,"Blood_Group","bloodGroup","BloodGroup") || "—").trim();
+  const mobile = String(value(donor,"Mobile","mobile","Phone","Contact_Number") || "—").trim();
+  const city = String(value(donor,"City","city","Town","Town_Village") || "").trim();
+  const district = String(value(donor,"District","district") || "").trim();
+  const dob = dateOnly(value(donor,"DOB","dob"));
+  const lastDonation = dateOnly(value(donor,"Last_Donation_Date","lastDonationDate","Last_Donation","lastDonation"));
+
+  // Keep the existing PNBDC photo-loading behaviour.
+  const donorIdForPhoto = String(value(donor,"Donor_ID","donorId","DonorID","ID","id") || "").trim();
+  const storedPhotoUrl = String(value(donor,"Photo_URL","photoUrl","PhotoURL","photoURL","Photo_Url") || "").trim();
+  const cachedPhoto = typeof getCachedDonorPhoto === "function" ? getCachedDonorPhoto(donorIdForPhoto) : "";
+  let photoUrl = cachedPhoto || storedPhotoUrl;
+
+  if (!cachedPhoto && storedPhotoUrl && typeof BloodDonationAPI !== "undefined" && BloodDonationAPI.getDonorPhotoData) {
+    try {
+      const serverPhoto = await Promise.race([
+        BloodDonationAPI.getDonorPhotoData({ photoUrl: storedPhotoUrl }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("PHOTO_FETCH_TIMEOUT")), 25000))
+      ]);
+      if (serverPhoto && serverPhoto.success && serverPhoto.dataUrl) {
+        photoUrl = serverPhoto.dataUrl;
+        if (donorIdForPhoto && typeof saveCachedDonorPhoto === "function") {
+          saveCachedDonorPhoto(donorIdForPhoto, photoUrl);
         }
-        return size;
-      };
-      const logo = await loadImageSafe("icons/poongurichi-logo.jpeg");
-      const photo = photoUrl ? await loadImageForCard(photoUrl) : null;
-
-      ctx.fillStyle="#edf3fa"; ctx.fillRect(0,0,1200,760);
-      rr(30,30,1140,700,34,"#ffffff","#cbd8e8",4);
-      rr(30,30,1140,155,34,"#123b82",null);
-      if (logo) { ctx.save(); ctx.beginPath(); ctx.arc(120,108,62,0,Math.PI*2); ctx.clip(); ctx.drawImage(logo,58,46,124,124); ctx.restore(); }
-
-      ctx.fillStyle="#ffffff";
-      ctx.font=`800 ${ta ? 34 : 42}px ${fontFamily}`; ctx.fillText(t.club1,215,92);
-      ctx.font=`500 ${ta ? 22 : 24}px ${fontFamily}`; ctx.fillText(t.club2,215,132);
-      ctx.font=`700 ${ta ? 18 : 20}px ${fontFamily}`; ctx.textAlign="right"; ctx.fillText(t.official,1135,110); ctx.textAlign="left";
-
-      rr(72,220,250,330,24,"#f3f7fc","#d7e2ef",2);
-      if (photo) {
-        ctx.save(); ctx.beginPath(); ctx.roundRect(92,240,210,250,18); ctx.clip();
-        const scale=Math.max(210/photo.width,250/photo.height); const w=photo.width*scale,h=photo.height*scale;
-        ctx.drawImage(photo,197-w/2,365-h/2,w,h); ctx.restore();
-      } else {
-        ctx.fillStyle="#dce9f7"; ctx.fillRect(92,240,210,250);
-        ctx.fillStyle="#123b82"; ctx.font=`700 70px ${fontFamily}`; ctx.textAlign="center"; ctx.fillText(name.split(/\s+/).slice(0,2).map(x=>x[0]).join("").toUpperCase(),197,390); ctx.textAlign="left";
       }
-      ctx.fillStyle="#5d6f84"; ctx.font=`600 ${ta ? 16 : 18}px ${fontFamily}`; ctx.textAlign="center"; ctx.fillText(t.photo,197,525); ctx.textAlign="left";
+    } catch (_) {}
+  }
 
-      ctx.fillStyle="#123b82";
-      ctx.font=`800 ${fitText(name,680,38,800)}px ${fontFamily}`; ctx.fillText(name,365,260);
-      rr(365,285,165,62,30,"#d9273f",null); ctx.fillStyle="#ffffff"; ctx.font=`800 32px ${fontFamily}`; ctx.textAlign="center"; ctx.fillText(blood,447,327); ctx.textAlign="left";
-      ctx.fillStyle="#64748b"; ctx.font=`600 ${ta ? 16 : 18}px ${fontFamily}`; ctx.fillText(t.blood,550,325);
+  const cardLang = (typeof getDonorCardLanguage === "function")
+    ? getDonorCardLanguage(donor)
+    : (typeof getAppLanguage === "function" ? getAppLanguage() : "en");
+  const ta = cardLang === "ta";
 
-      const fields=[[t.id,donorId],[t.mobile,mobile],[t.dob,dob],[t.location,[city,district].filter(Boolean).join(", ") || "—"]];
-      let fy=400;
-      fields.forEach(([label,val])=>{
-        ctx.fillStyle="#123b82"; ctx.font=`700 ${ta ? 16 : 18}px ${fontFamily}`; ctx.fillText(label,365,fy);
-        ctx.fillStyle="#172033"; ctx.font=`600 ${fitText(String(val||"—"),500,25,600)}px ${fontFamily}`; ctx.fillText(String(val||"—"),565,fy);
-        ctx.strokeStyle="#e1e8f0"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(365,fy+18); ctx.lineTo(1090,fy+18); ctx.stroke(); fy+=62;
-      });
+  const t = ta ? {
+    club1:"பூங்குறிச்சி நண்பர்கள்",
+    club2:"இரத்த தான நன்கொடையாளர்கள் சங்கம்",
+    pledge:"நான் உறுதியளிக்கிறேன்",
+    donor:"தன்னார்வ இரத்த தான நன்கொடையாளர்",
+    blood:"இரத்த வகை",
+    id:"நன்கொடையாளர் ID",
+    mobile:"கைபேசி எண்",
+    dob:"பிறந்த தேதி",
+    location:"இடம்",
+    lastDonation:"கடைசி இரத்த தானம்",
+    important:"முக்கிய தகவல்",
+    emergency:"அவசர தொடர்பு",
+    helpline:"PNBDC உதவி எண்",
+    scan:"நன்கொடையாளர் விவரங்களுக்கு ஸ்கேன் செய்யவும்",
+    footer:"பூங்குறிச்சி நண்பர்களின் அலகு",
+    pledge1:"தொடர்ந்து இரத்த தானம் செய்வேன்",
+    pledge2:"தேவைப்படுவோருக்கு உதவுவேன்",
+    pledge3:"சமூகத்தை ஆதரிப்பேன்",
+    pledge4:"விழிப்புணர்வை பரப்புவேன்"
+  } : {
+    club1:"Poongurichi Nanbargal",
+    club2:"Blood Donors Club",
+    pledge:"I PLEDGE",
+    donor:"VOLUNTARY BLOOD DONOR",
+    blood:"BLOOD GROUP",
+    id:"DONOR ID",
+    mobile:"MOBILE",
+    dob:"DATE OF BIRTH",
+    location:"TOWN / VILLAGE",
+    lastDonation:"LAST DONATION",
+    important:"Important Information",
+    emergency:"Emergency Contact",
+    helpline:"PNBDC Helpline Number",
+    scan:"SCAN FOR DONOR DETAILS",
+    footer:"Unit of Poongurichi Nanbargal",
+    pledge1:"Donate Regularly",
+    pledge2:"Help Patients",
+    pledge3:"Support Community",
+    pledge4:"Spread Awareness"
+  };
 
-      rr(365,665,725,40,18,"#eef6ff",null); ctx.fillStyle="#123b82"; ctx.font=`700 ${ta ? 15 : 18}px ${fontFamily}`; ctx.textAlign="center"; ctx.fillText(t.footer,727,691); ctx.textAlign="left";
-      return await new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error("Could not create ID card PNG.")),"image/png",1));
+  // ------------------------------------------------------------
+  // QR generator: qrcode-generator, loaded only when required.
+  // ------------------------------------------------------------
+  async function ensurePNBDCQRLIB() {
+    if (window.qrcode) return window.qrcode;
+    await new Promise((resolve, reject) => {
+      const existing = document.querySelector('script[data-pnbdc-qrcode="1"]');
+      if (existing) {
+        existing.addEventListener("load", resolve, { once:true });
+        existing.addEventListener("error", reject, { once:true });
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js";
+      script.async = true;
+      script.dataset.pnbdcQrcode = "1";
+      script.onload = resolve;
+      script.onerror = () => reject(new Error("QR_LIBRARY_LOAD_FAILED"));
+      document.head.appendChild(script);
+    });
+    if (!window.qrcode) throw new Error("QR library unavailable");
+    return window.qrcode;
+  }
+
+  async function drawPNBDCQROnCanvas(ctx, text, x, y, size) {
+    try {
+      const qrcode = await ensurePNBDCQRLIB();
+      const qr = qrcode(0, "H");
+      qr.addData(text);
+      qr.make();
+      const count = qr.getModuleCount();
+      const cell = size / count;
+
+      ctx.save();
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(x - 12, y - 12, size + 24, size + 24);
+      ctx.fillStyle = "#071f52";
+
+      for (let row = 0; row < count; row++) {
+        for (let col = 0; col < count; col++) {
+          if (qr.isDark(row, col)) {
+            ctx.fillRect(
+              x + col * cell,
+              y + row * cell,
+              Math.ceil(cell),
+              Math.ceil(cell)
+            );
+          }
+        }
+      }
+
+      // Small PN drop in the centre, kept deliberately small so QR remains scannable.
+      const cx = x + size / 2;
+      const cy = y + size / 2;
+      const r = Math.max(9, size * 0.035);
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(cx, cy, r + 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#e31b23";
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - r);
+      ctx.bezierCurveTo(cx - r * 1.2, cy - r * 0.15, cx - r * 0.9, cy + r, cx, cy + r * 1.2);
+      ctx.bezierCurveTo(cx + r * 0.9, cy + r, cx + r * 1.2, cy - r * 0.15, cx, cy - r);
+      ctx.fill();
+      ctx.restore();
+      return true;
+    } catch (error) {
+      console.warn("PNBDC QR generation failed:", error);
+      return false;
     }
+  }
+
+  // ------------------------------------------------------------
+  // Canvas helpers
+  // ------------------------------------------------------------
+  const W = 1200;
+  const CARD_H = 760;
+  const GAP = 40;
+  const H = CARD_H * 2 + GAP;
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Your browser cannot generate the ID card.");
+
+  const fontFamily = '"Noto Sans Tamil","Nirmala UI","Latha",Arial,sans-serif';
+
+  const rr = (x,y,w,h,r,fill,stroke,sw=1) => {
+    ctx.beginPath();
+    ctx.roundRect(x,y,w,h,r);
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.lineWidth = sw; ctx.strokeStyle = stroke; ctx.stroke(); }
+  };
+
+  const fitText = (text, maxWidth, startSize, weight=700) => {
+    let size = startSize;
+    while (size > 14) {
+      ctx.font = `${weight} ${size}px ${fontFamily}`;
+      if (ctx.measureText(String(text)).width <= maxWidth) break;
+      size -= 1;
+    }
+    return size;
+  };
+
+  const drawHeartDrop = (x, y, scale=1) => {
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.scale(scale,scale);
+    ctx.fillStyle="#e31b23";
+    ctx.beginPath();
+    ctx.moveTo(0,-58);
+    ctx.bezierCurveTo(-48,-12,-44,25,0,52);
+    ctx.bezierCurveTo(44,25,48,-12,0,-58);
+    ctx.fill();
+    ctx.fillStyle="#ffffff";
+    ctx.beginPath();
+    ctx.arc(-9,-23,7,0,Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  };
+
+  const drawIconCircle = (x,y,letter,bg="#123b82") => {
+    ctx.fillStyle=bg;
+    ctx.beginPath();
+    ctx.arc(x,y,30,0,Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle="#fff";
+    ctx.font=`800 25px ${fontFamily}`;
+    ctx.textAlign="center";
+    ctx.fillText(letter,x,y+9);
+    ctx.textAlign="left";
+  };
+
+  const drawPhoto = async (photo) => {
+    rr(70,220,310,330,26,"#f3f7fc","#d7e2ef",3);
+    if (photo) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(88,238,274,294,20);
+      ctx.clip();
+      const scale=Math.max(274/photo.width,294/photo.height);
+      const w=photo.width*scale;
+      const h=photo.height*scale;
+      ctx.drawImage(photo,225-w/2,385-h/2,w,h);
+      ctx.restore();
+    } else {
+      ctx.fillStyle="#dce9f7";
+      ctx.fillRect(88,238,274,294);
+      ctx.fillStyle="#123b82";
+      ctx.font=`800 76px ${fontFamily}`;
+      ctx.textAlign="center";
+      ctx.fillText(name.split(/\s+/).slice(0,2).map(x=>x[0]).join("").toUpperCase(),225,410);
+      ctx.textAlign="left";
+    }
+  };
+
+  // ============================================================
+  // FRONT
+  // ============================================================
+  ctx.fillStyle="#eaf0f7";
+  ctx.fillRect(0,0,W,H);
+
+  rr(30,30,1140,CARD_H-60,34,"#ffffff","#cad7e7",4);
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(30,30,1140,155,34);
+  ctx.clip();
+  ctx.fillStyle="#123b82";
+  ctx.fillRect(30,30,1140,155);
+  ctx.fillStyle="#e31b23";
+  ctx.beginPath();
+  ctx.moveTo(720,30); ctx.lineTo(1170,30); ctx.lineTo(1170,125); ctx.lineTo(890,185); ctx.closePath(); ctx.fill();
+  ctx.restore();
+
+  const logo = await loadImageSafe("icons/poongurichi-logo.jpeg");
+  const photo = photoUrl ? await loadImageForCard(photoUrl) : null;
+
+  if (logo) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(120,108,62,0,Math.PI*2);
+    ctx.clip();
+    ctx.drawImage(logo,58,46,124,124);
+    ctx.restore();
+  }
+
+  ctx.fillStyle="#fff";
+  ctx.font=`800 ${ta ? 34 : 42}px ${fontFamily}`;
+  ctx.fillText(t.club1,215,92);
+  ctx.fillStyle="#ffec3d";
+  ctx.font=`800 ${ta ? 22 : 28}px ${fontFamily}`;
+  ctx.fillText(t.club2,215,132);
+  ctx.fillStyle="#fff";
+  ctx.font=`700 18px ${fontFamily}`;
+  ctx.fillText("DONATE  |  SUPPORT  |  SAVE LIVES",215,162);
+
+  drawHeartDrop(1080,105,1.15);
+
+  await drawPhoto(photo);
+
+  ctx.fillStyle="#123b82";
+  ctx.font=`800 ${fitText(name,700,44,800)}px ${fontFamily}`;
+  ctx.fillText(name,420,260);
+
+  rr(420,282,250,62,30,"#e31b23",null);
+  ctx.fillStyle="#fff";
+  ctx.font=`800 ${ta ? 25 : 29}px ${fontFamily}`;
+  ctx.textAlign="center";
+  ctx.fillText(t.donor,545,321);
+  ctx.textAlign="left";
+
+  rr(700,282,180,62,30,"#123b82",null);
+  ctx.fillStyle="#fff";
+  ctx.font=`800 35px ${fontFamily}`;
+  ctx.textAlign="center";
+  ctx.fillText(blood,790,324);
+  ctx.textAlign="left";
+
+  const location=[city,district].filter(Boolean).join(", ") || "—";
+  const fields=[
+    [t.id,donorId],
+    [t.mobile,mobile],
+    [t.dob,dob || "—"],
+    [t.location,location],
+    [t.lastDonation,lastDonation || "—"]
+  ];
+
+  let fy=405;
+  fields.forEach(([label,val],i)=>{
+    drawIconCircle(405,fy-7,["ID","☎","D","⌖","♥"][i],i===4?"#e31b23":"#123b82");
+    ctx.fillStyle="#52657c";
+    ctx.font=`700 ${ta ? 16 : 18}px ${fontFamily}`;
+    ctx.fillText(label,450,fy);
+    ctx.fillStyle="#172033";
+    ctx.font=`700 ${fitText(String(val||"—"),455,25,700)}px ${fontFamily}`;
+    ctx.fillText(String(val||"—"),625,fy);
+    ctx.strokeStyle="#e1e8f0";
+    ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.moveTo(450,fy+18);
+    ctx.lineTo(880,fy+18);
+    ctx.stroke();
+    fy+=58;
+  });
+
+  // QR panel — only donor profile URL is encoded.
+  rr(910,365,220,280,22,"#f7fbff","#dbe6f2",3);
+  const profileUrl =
+    "https://poongurichinanbargal.github.io/blood-donationapp/?donor=" +
+    encodeURIComponent(donorId);
+  const qrOk = await drawPNBDCQROnCanvas(ctx,profileUrl,935,390,170);
+  if (!qrOk) {
+    ctx.fillStyle="#123b82";
+    ctx.font=`700 18px ${fontFamily}`;
+    ctx.textAlign="center";
+    ctx.fillText("QR unavailable",1020,485);
+    ctx.textAlign="left";
+  }
+  ctx.fillStyle="#123b82";
+  ctx.font=`800 15px ${fontFamily}`;
+  ctx.textAlign="center";
+  ctx.fillText(t.scan,1020,605);
+  ctx.textAlign="left";
+
+  // Front footer.
+  ctx.fillStyle="#e31b23";
+  ctx.beginPath();
+  ctx.moveTo(30,665);
+  ctx.quadraticCurveTo(350,620,650,675);
+  ctx.quadraticCurveTo(920,720,1170,650);
+  ctx.lineTo(1170,730); ctx.lineTo(30,730); ctx.closePath(); ctx.fill();
+  ctx.fillStyle="#fff";
+  ctx.font=`700 21px ${fontFamily}`;
+  ctx.fillText("SAFE BLOOD  •  STRONGER COMMUNITIES",70,704);
+  ctx.font=`800 21px ${fontFamily}`;
+  ctx.textAlign="right";
+  ctx.fillText("TOGETHER WE SAVE LIVES",1125,704);
+  ctx.textAlign="left";
+
+  // ============================================================
+  // BACK
+  // ============================================================
+  const by=CARD_H+GAP;
+  rr(30,by+30,1140,CARD_H-60,34,"#ffffff","#cad7e7",4);
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(30,by+30,1140,155,34);
+  ctx.clip();
+  ctx.fillStyle="#123b82";
+  ctx.fillRect(30,by+30,1140,155);
+  ctx.fillStyle="#0a63ce";
+  ctx.beginPath();
+  ctx.moveTo(760,by+30); ctx.lineTo(1170,by+30); ctx.lineTo(1170,by+145); ctx.lineTo(900,by+185); ctx.closePath(); ctx.fill();
+  ctx.restore();
+
+  if (logo) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(120,by+108,62,0,Math.PI*2);
+    ctx.clip();
+    ctx.drawImage(logo,58,by+46,124,124);
+    ctx.restore();
+  }
+
+  ctx.fillStyle="#fff";
+  ctx.font=`800 ${ta ? 34 : 42}px ${fontFamily}`;
+  ctx.fillText(t.club1,215,by+92);
+  ctx.fillStyle="#ffec3d";
+  ctx.font=`800 ${ta ? 22 : 28}px ${fontFamily}`;
+  ctx.fillText(t.club2,215,by+132);
+  ctx.fillStyle="#fff";
+  ctx.font=`700 18px ${fontFamily}`;
+  ctx.fillText("DONATE  |  SUPPORT  |  SAVE LIVES",215,by+162);
+
+  drawHeartDrop(1080,by+105,1.15);
+
+  rr(330,by+205,540,64,32,"#e31b23",null);
+  ctx.fillStyle="#fff";
+  ctx.font=`800 ${ta ? 27 : 34}px ${fontFamily}`;
+  ctx.textAlign="center";
+  ctx.fillText(t.pledge,600,by+247);
+  ctx.textAlign="left";
+
+  const pledgeItems=[
+    ["♥",t.pledge1],
+    ["+",t.pledge2],
+    ["♥",t.pledge3],
+    ["✓",t.pledge4]
+  ];
+  pledgeItems.forEach((item,i)=>{
+    const x=165+i*280;
+    drawIconCircle(x,by+330,item[0],"#e31b23");
+    ctx.fillStyle="#123b82";
+    ctx.font=`700 ${ta ? 15 : 18}px ${fontFamily}`;
+    ctx.textAlign="center";
+    const words=item[1].split(" ");
+    if(words.length>2){
+      ctx.fillText(words.slice(0,2).join(" "),x,by+380);
+      ctx.fillText(words.slice(2).join(" "),x,by+405);
+    } else {
+      ctx.fillText(item[1],x,by+388);
+    }
+    ctx.textAlign="left";
+    if(i<3){
+      ctx.strokeStyle="#b9cbe0";
+      ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(x+110,by+300); ctx.lineTo(x+110,by+425); ctx.stroke();
+    }
+  });
+
+  rr(70,by+440,1060,135,20,"#edf5ff","#d8e6f5",2);
+  ctx.fillStyle="#123b82";
+  ctx.font=`800 ${ta ? 22 : 27}px ${fontFamily}`;
+  ctx.fillText(t.important,100,by+480);
+  ctx.fillStyle="#172033";
+  ctx.font=`600 17px ${fontFamily}`;
+  const bullets=ta ? [
+    "இந்த அட்டை பதிவு செய்யப்பட்ட தன்னார்வ இரத்த தான நன்கொடையாளரை அடையாளப்படுத்துகிறது.",
+    "இது மருத்துவ அட்டை அல்ல.",
+    "அவசரநிலையில் கீழே உள்ள PNBDC உதவி எண்ணை தொடர்பு கொள்ளவும்.",
+    "ஒவ்வொரு இரத்த தானத்திற்குப் பிறகும் உங்கள் பதிவை புதுப்பிக்கவும்."
+  ] : [
+    "This card identifies the holder as a registered voluntary blood donor.",
+    "This card is not a medical card.",
+    "In an emergency, please contact the PNBDC helpline below.",
+    "Please update your donation record after each donation."
+  ];
+  bullets.forEach((b,i)=>{
+    ctx.fillStyle="#e31b23";
+    ctx.font=`800 18px ${fontFamily}`;
+    ctx.fillText("♥",105,by+512+i*22);
+    ctx.fillStyle="#172033";
+    ctx.font=`600 16px ${fontFamily}`;
+    ctx.fillText(b,135,by+512+i*22);
+  });
+
+  // Emergency contact.
+  rr(70,by+595,1060,78,20,"#ffe7e9",null);
+  drawIconCircle(115,by+634,"☎","#e31b23");
+  ctx.fillStyle="#e31b23";
+  ctx.font=`800 21px ${fontFamily}`;
+  ctx.fillText(t.emergency,165,by+628);
+  ctx.fillStyle="#172033";
+  ctx.font=`800 24px ${fontFamily}`;
+  ctx.fillText(`${t.helpline} : 97507 85555`,165,by+657);
+
+  // Back footer: specifically requested.
+  ctx.fillStyle="#123b82";
+  ctx.fillRect(30,by+680,1140,50);
+  ctx.fillStyle="#fff";
+  ctx.font=`800 22px ${fontFamily}`;
+  ctx.textAlign="center";
+  ctx.fillText(t.footer,600,by+713);
+  ctx.textAlign="left";
+
+  // Return a single mobile-friendly PNG containing front + back.
+  return await new Promise((resolve,reject)=>{
+    canvas.toBlob(
+      blob=>blob ? resolve(blob) : reject(new Error("Could not create ID card PNG.")),
+      "image/png",
+      1
+    );
+  });
+}
+
 
     async function loadImageSafe(src) {
       return await new Promise((resolve)=>{
