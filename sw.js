@@ -1,7 +1,7 @@
-const CACHE_NAME = 'pn-bdc-clean-v2-20261001';
+const CACHE_NAME = 'pn-bdc-clean-v3-20261001';
 const APP_SHELL = [
   './', './index.html',
-  './style.css?v=20261001-pnbdc-clean-v2',
+  './style.css?v=20261001-pnbdc-clean-v3',
   './app.js?v=20261001-pnbdc-clean-v2',
   './pn-bot.js', './manifest.json',
   './icons/poongurichi-logo.jpeg', './icons/icon-192.png',
