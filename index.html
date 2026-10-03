@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta name="pn-build" content="PNBDC ID Card Alignment Final 2026-10-03">
   <meta charset="UTF-8">
 
   <meta
@@ -4204,7 +4205,6 @@
  No Google Sheet / Apps Script / donor data structure changes are required.
 */
 
-
 async function createProfessionalDonorIdCard(donor) {
   const name = String(value(donor,"Name","name") || "Donor").trim();
   const donorId = String(value(donor,"Donor_ID","donorId","DonorID","ID","id") || "—").trim();
@@ -4215,6 +4215,7 @@ async function createProfessionalDonorIdCard(donor) {
   const dob = dateOnly(value(donor,"DOB","dob"));
   const lastDonation = dateOnly(value(donor,"Last_Donation_Date","lastDonationDate","Last_Donation","lastDonation"));
 
+  // Keep the existing PNBDC photo-loading behaviour.
   const donorIdForPhoto = String(value(donor,"Donor_ID","donorId","DonorID","ID","id") || "").trim();
   const storedPhotoUrl = String(value(donor,"Photo_URL","photoUrl","PhotoURL","photoURL","Photo_Url") || "").trim();
   const photoFileId = String(value(donor,"Photo_File_ID","photoFileId","PhotoFileID","fileId") || "").trim();
@@ -4248,48 +4249,48 @@ async function createProfessionalDonorIdCard(donor) {
   const t = ta ? {
     club1:"பூங்குறிச்சி நண்பர்கள்",
     club2:"இரத்த தான நன்கொடையாளர்கள் சங்கம்",
-    donor:"தன்னார்வ இரத்த தான நன்கொடையாளர்",
-    id:"நன்கொடையாளர் ID",
-    blood:"இரத்த வகை",
-    mobile:"கைபேசி எண்",
-    location:"ஊர் / கிராமம்",
-    dob:"பிறந்த தேதி",
-    lastDonation:"கடைசி இரத்த தானம்",
-    scan:"நன்கொடையாளர் விவரங்களுக்கு ஸ்கேன் செய்யவும்",
     pledge:"நான் உறுதியளிக்கிறேன்",
+    donor:"தன்னார்வ இரத்த தான நன்கொடையாளர்",
+    blood:"இரத்த வகை",
+    id:"நன்கொடையாளர் ID",
+    mobile:"கைபேசி எண்",
+    dob:"பிறந்த தேதி",
+    location:"இடம்",
+    lastDonation:"கடைசி இரத்த தானம்",
+    important:"முக்கிய தகவல்",
     emergency:"அவசர தொடர்பு",
     helpline:"PNBDC உதவி எண்",
-    important:"முக்கிய தகவல்",
+    scan:"நன்கொடையாளர் விவரங்களுக்கு ஸ்கேன் செய்யவும்",
     footer:"பூங்குறிச்சி நண்பர்களின் அலகு",
-    regular:"தொடர்ந்து இரத்த தானம்",
-    patients:"நோயாளிகளுக்கு உதவி",
-    community:"சமூகத்தை ஆதரிக்கவும்",
-    awareness:"விழிப்புணர்வை பரப்பவும்"
+    pledge1:"தொடர்ந்து இரத்த தானம் செய்வேன்",
+    pledge2:"தேவைப்படுவோருக்கு உதவுவேன்",
+    pledge3:"சமூகத்தை ஆதரிப்பேன்",
+    pledge4:"விழிப்புணர்வை பரப்புவேன்"
   } : {
     club1:"Poongurichi Nanbargal",
-    club2:"Blood Donor’s Club",
-    donor:"VOLUNTARY BLOOD DONOR",
-    id:"Donor ID",
-    blood:"Blood Group",
-    mobile:"Mobile",
-    location:"Town / Village",
-    dob:"Date of Birth",
-    lastDonation:"Last Donation",
-    scan:"SCAN FOR DONOR DETAILS",
+    club2:"Blood Donors Club",
     pledge:"I PLEDGE",
+    donor:"VOLUNTARY BLOOD DONOR",
+    blood:"BLOOD GROUP",
+    id:"DONOR ID",
+    mobile:"MOBILE",
+    dob:"DATE OF BIRTH",
+    location:"TOWN / VILLAGE",
+    lastDonation:"LAST DONATION",
+    important:"Important Information",
     emergency:"Emergency Contact",
     helpline:"PNBDC Helpline Number",
-    important:"Important Information",
+    scan:"SCAN FOR DONOR DETAILS",
     footer:"Unit of Poongurichi Nanbargal",
-    regular:"Donate Regularly",
-    patients:"Help Patients",
-    community:"Support Community",
-    awareness:"Spread Awareness"
+    pledge1:"Donate Regularly",
+    pledge2:"Help Patients",
+    pledge3:"Support Community",
+    pledge4:"Spread Awareness"
   };
 
-  // ============================================================
-  // QR generator — donor profile URL only.
-  // ============================================================
+  // ------------------------------------------------------------
+  // QR generator: qrcode-generator, loaded only when required.
+  // ------------------------------------------------------------
   async function ensurePNBDCQRLIB() {
     if (window.qrcode) return window.qrcode;
     await new Promise((resolve, reject) => {
@@ -4311,7 +4312,7 @@ async function createProfessionalDonorIdCard(donor) {
     return window.qrcode;
   }
 
-  async function drawQR(ctx, text, x, y, size) {
+  async function drawPNBDCQROnCanvas(ctx, text, x, y, size) {
     try {
       const qrcode = await ensurePNBDCQRLIB();
       const qr = qrcode(0, "H");
@@ -4321,373 +4322,375 @@ async function createProfessionalDonorIdCard(donor) {
       const cell = size / count;
 
       ctx.save();
-      ctx.fillStyle="#fff";
-      ctx.fillRect(x-18,y-18,size+36,size+36);
-      ctx.fillStyle="#071f52";
-      for(let row=0;row<count;row++){
-        for(let col=0;col<count;col++){
-          if(qr.isDark(row,col)){
-            ctx.fillRect(x+col*cell,y+row*cell,Math.ceil(cell),Math.ceil(cell));
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(x - 12, y - 12, size + 24, size + 24);
+      ctx.fillStyle = "#071f52";
+
+      for (let row = 0; row < count; row++) {
+        for (let col = 0; col < count; col++) {
+          if (qr.isDark(row, col)) {
+            ctx.fillRect(
+              x + col * cell,
+              y + row * cell,
+              Math.ceil(cell),
+              Math.ceil(cell)
+            );
           }
         }
       }
 
-      // PNBDC red drop in the QR centre.
-      const cx=x+size/2, cy=y+size/2, r=Math.max(8,size*.035);
-      ctx.fillStyle="#fff";
-      ctx.beginPath(); ctx.arc(cx,cy,r+6,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle="#e31b23";
+      // Small PN drop in the centre, kept deliberately small so QR remains scannable.
+      const cx = x + size / 2;
+      const cy = y + size / 2;
+      const r = Math.max(9, size * 0.035);
+      ctx.fillStyle = "#ffffff";
       ctx.beginPath();
-      ctx.moveTo(cx,cy-r);
-      ctx.bezierCurveTo(cx-r*1.2,cy-r*.15,cx-r*.9,cy+r,cx,cy+r*1.2);
-      ctx.bezierCurveTo(cx+r*.9,cy+r,cx+r*1.2,cy-r*.15,cx,cy-r);
+      ctx.arc(cx, cy, r + 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#e31b23";
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - r);
+      ctx.bezierCurveTo(cx - r * 1.2, cy - r * 0.15, cx - r * 0.9, cy + r, cx, cy + r * 1.2);
+      ctx.bezierCurveTo(cx + r * 0.9, cy + r, cx + r * 1.2, cy - r * 0.15, cx, cy - r);
       ctx.fill();
       ctx.restore();
       return true;
-    } catch(e) {
-      console.warn("PNBDC QR generation failed:",e);
+    } catch (error) {
+      console.warn("PNBDC QR generation failed:", error);
       return false;
     }
   }
 
-  // ============================================================
-  // Reference-style two-card layout.
-  // Output: front + back side-by-side, like the supplied sample.
-  // ============================================================
-  const W = 1536;
-  const H = 1024;
-  const CARD_W = 704;
-  const CARD_H = 952;
-  const LEFT = 32;
-  const TOP = 36;
-  const GAP = 64;
-  const RIGHT = LEFT + CARD_W + GAP;
+  // ------------------------------------------------------------
+  // Canvas helpers
+  // ------------------------------------------------------------
+  const W = 1200;
+  const CARD_H = 760;
+  const GAP = 40;
+  const H = CARD_H * 2 + GAP;
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Your browser cannot generate the ID card.");
 
-  const canvas=document.createElement("canvas");
-  canvas.width=W;
-  canvas.height=H;
-  const ctx=canvas.getContext("2d");
-  if(!ctx) throw new Error("Your browser cannot generate the ID card.");
+  const fontFamily = '"Noto Sans Tamil","Nirmala UI","Latha",Arial,sans-serif';
 
-  const fontFamily='"Noto Sans Tamil","Nirmala UI","Latha",Arial,sans-serif';
-
-  const roundRect=(x,y,w,h,r,fill,stroke,sw=1)=>{
+  const rr = (x,y,w,h,r,fill,stroke,sw=1) => {
     ctx.beginPath();
     ctx.roundRect(x,y,w,h,r);
-    if(fill){ctx.fillStyle=fill;ctx.fill();}
-    if(stroke){ctx.lineWidth=sw;ctx.strokeStyle=stroke;ctx.stroke();}
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.lineWidth = sw; ctx.strokeStyle = stroke; ctx.stroke(); }
   };
 
-  const fitText=(txt,maxWidth,startSize=28,weight=800)=>{
-    let size=startSize;
-    while(size>13){
-      ctx.font=`${weight} ${size}px ${fontFamily}`;
-      if(ctx.measureText(String(txt)).width<=maxWidth) break;
-      size--;
+  const fitText = (text, maxWidth, startSize, weight=700) => {
+    let size = startSize;
+    while (size > 14) {
+      ctx.font = `${weight} ${size}px ${fontFamily}`;
+      if (ctx.measureText(String(text)).width <= maxWidth) break;
+      size -= 1;
     }
     return size;
   };
 
-  const drawHeartDrop=(x,y,scale=1,color="#e31b23")=>{
-    ctx.save(); ctx.translate(x,y); ctx.scale(scale,scale);
-    ctx.fillStyle=color;
+  const drawHeartDrop = (x, y, scale=1) => {
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.scale(scale,scale);
+    ctx.fillStyle="#e31b23";
     ctx.beginPath();
-    ctx.moveTo(0,-55);
-    ctx.bezierCurveTo(-42,-12,-40,23,0,52);
-    ctx.bezierCurveTo(40,23,42,-12,0,-55);
+    ctx.moveTo(0,-58);
+    ctx.bezierCurveTo(-48,-12,-44,25,0,52);
+    ctx.bezierCurveTo(44,25,48,-12,0,-58);
+    ctx.fill();
+    ctx.fillStyle="#ffffff";
+    ctx.beginPath();
+    ctx.arc(-9,-23,7,0,Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  };
+
+  const drawIconCircle = (x,y,letter,bg="#123b82") => {
+    ctx.fillStyle=bg;
+    ctx.beginPath();
+    ctx.arc(x,y,30,0,Math.PI*2);
     ctx.fill();
     ctx.fillStyle="#fff";
-    ctx.beginPath();ctx.arc(-8,-21,6,0,Math.PI*2);ctx.fill();
-    ctx.restore();
-  };
-
-  const drawHeart=(x,y,size,color="#e31b23")=>{
-    ctx.save();ctx.translate(x,y);ctx.scale(size/100,size/100);
-    ctx.fillStyle=color;
-    ctx.beginPath();
-    ctx.moveTo(0,35);
-    ctx.bezierCurveTo(-65,-5,-45,-48,-15,-40);
-    ctx.bezierCurveTo(-3,-37,0,-27,0,-27);
-    ctx.bezierCurveTo(0,-27,3,-37,15,-40);
-    ctx.bezierCurveTo(45,-48,65,-5,0,35);
-    ctx.fill();ctx.restore();
-  };
-
-  const drawMiniIcon=(x,y,type,color="#123b82")=>{
-    ctx.save();
-    ctx.fillStyle=color;
-    if(type==="drop"){
-      drawHeartDrop(x,y,.32,color);
-    }else if(type==="phone"){
-      ctx.beginPath();ctx.arc(x,y,18,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle="#fff";ctx.font=`800 20px ${fontFamily}`;ctx.textAlign="center";ctx.fillText("☎",x,y+7);
-    }else if(type==="pin"){
-      ctx.beginPath();ctx.arc(x,y-4,15,0,Math.PI*2);ctx.fill();
-      ctx.beginPath();ctx.arc(x,y+10,10,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(x,y-4,5,0,Math.PI*2);ctx.fill();
-    }else if(type==="id"){
-      roundRect(x-18,y-13,36,27,5,color);
-      ctx.fillStyle="#fff";ctx.font=`800 16px ${fontFamily}`;ctx.textAlign="center";ctx.fillText("ID",x,y+6);
-    }else if(type==="calendar"){
-      roundRect(x-17,y-15,34,30,5,color);
-      ctx.fillStyle="#fff";ctx.fillRect(x-11,y-4,22,2);
-      ctx.font=`800 14px ${fontFamily}`;ctx.textAlign="center";ctx.fillText("D",x,y+10);
-    }
-    ctx.restore();
+    ctx.font=`800 25px ${fontFamily}`;
+    ctx.textAlign="center";
+    ctx.fillText(letter,x,y+9);
     ctx.textAlign="left";
   };
 
-  const loadPhoto = async()=>{
-    if(!photoUrl) return null;
-    try{return await loadImageForCard(photoUrl);}catch(_){return null;}
+  const drawPhoto = async (photo) => {
+    rr(65,215,325,345,28,"#f3f7fc","#d7e2ef",3);
+    if (photo) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(83,233,288,309,22);
+      ctx.clip();
+      const scale=Math.max(288/photo.width,309/photo.height);
+      const w=photo.width*scale;
+      const h=photo.height*scale;
+      ctx.drawImage(photo,227-w/2,387-h/2,w,h);
+      ctx.restore();
+    } else {
+      ctx.fillStyle="#dce9f7";
+      ctx.fillRect(83,233,288,309);
+      ctx.fillStyle="#123b82";
+      ctx.font=`800 76px ${fontFamily}`;
+      ctx.textAlign="center";
+      ctx.fillText(name.split(/\s+/).slice(0,2).map(x=>x[0]).join("").toUpperCase(),225,410);
+      ctx.textAlign="left";
+    }
   };
-
-  const logo = await loadImageSafe("icons/poongurichi-logo.jpeg");
-  const photo = await loadPhoto();
-
-  // Background.
-  const bg=ctx.createLinearGradient(0,0,W,H);
-  bg.addColorStop(0,"#f7fbff");
-  bg.addColorStop(.5,"#ffffff");
-  bg.addColorStop(1,"#eef5ff");
-  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
-
-  // Soft card shadows.
-  ctx.save();
-  ctx.shadowColor="rgba(11,43,90,.20)";
-  ctx.shadowBlur=24;ctx.shadowOffsetY=10;
-  roundRect(LEFT,TOP,CARD_W,CARD_H,32,"#fff");
-  roundRect(RIGHT,TOP,CARD_W,CARD_H,32,"#fff");
-  ctx.restore();
 
   // ============================================================
   // FRONT
   // ============================================================
-  const fx=LEFT, fy=TOP;
+  ctx.fillStyle="#eaf0f7";
+  ctx.fillRect(0,0,W,H);
 
-  // Top red/white/blue header.
+  rr(30,30,1140,CARD_H-60,34,"#ffffff","#cad7e7",4);
   ctx.save();
-  ctx.beginPath();ctx.roundRect(fx,fy,CARD_W,210,32);ctx.clip();
-  const fh=ctx.createLinearGradient(fx,fy,fx+CARD_W,fy+210);
-  fh.addColorStop(0,"#d90012");fh.addColorStop(.55,"#f21d2d");fh.addColorStop(1,"#fff");
-  ctx.fillStyle=fh;ctx.fillRect(fx,fy,CARD_W,210);
-  ctx.fillStyle="rgba(255,255,255,.92)";
   ctx.beginPath();
-  ctx.moveTo(fx+180,fy+72);
-  ctx.quadraticCurveTo(fx+380,fy-5,fx+CARD_W,fy+92);
-  ctx.lineTo(fx+CARD_W,fy+210);
-  ctx.lineTo(fx+90,fy+210);
-  ctx.closePath();ctx.fill();
-  ctx.fillStyle="rgba(255,255,255,.35)";
+  ctx.roundRect(30,30,1140,155,34);
+  ctx.clip();
+  ctx.fillStyle="#123b82";
+  ctx.fillRect(30,30,1140,155);
+  ctx.fillStyle="#e31b23";
   ctx.beginPath();
-  ctx.moveTo(fx,fy+95);
-  ctx.quadraticCurveTo(fx+250,fy+35,fx+CARD_W,fy+150);
-  ctx.lineTo(fx+CARD_W,fy+210);ctx.lineTo(fx,fy+210);ctx.closePath();ctx.fill();
+  ctx.moveTo(720,30); ctx.lineTo(1170,30); ctx.lineTo(1170,125); ctx.lineTo(890,185); ctx.closePath(); ctx.fill();
   ctx.restore();
 
-  if(logo){
-    ctx.save();ctx.beginPath();ctx.arc(fx+105,fy+100,86,0,Math.PI*2);ctx.clip();
-    ctx.drawImage(logo,fx+19,fy+14,172,172);ctx.restore();
-  }
+  const logo = await loadImageSafe("icons/poongurichi-logo.jpeg");
+  const photo = photoUrl ? await loadImageForCard(photoUrl) : null;
 
-  ctx.fillStyle="#123b82";
-  ctx.font=`800 ${ta?34:38}px ${fontFamily}`;
-  ctx.fillText(t.club1,fx+220,fy+84);
-  ctx.fillStyle="#e31b23";
-  ctx.font=`800 ${ta?24:30}px ${fontFamily}`;
-  ctx.fillText(t.club2,fx+220,fy+125);
-  ctx.strokeStyle="#123b82";ctx.lineWidth=2;
-  ctx.beginPath();ctx.moveTo(fx+220,fy+142);ctx.lineTo(fx+570,fy+142);ctx.stroke();
-  ctx.fillStyle="#123b82";ctx.font=`700 16px ${fontFamily}`;
-  ctx.fillText("DONATE  |  SUPPORT  |  SAVE LIVES",fx+220,fy+168);
-
-  drawHeartDrop(fx+620,fy+108,.95);
-
-  // Left motivational text.
-  ctx.fillStyle="#123b82";
-  ctx.font=`700 italic 34px Georgia,serif`;
-  ctx.fillText("Be",fx+55,fy+275);
-  ctx.fillText("a Hero",fx+45,fy+315);
-  ctx.fillStyle="#e31b23";
-  ctx.font=`700 italic 38px Georgia,serif`;
-  ctx.fillText("Donate",fx+45,fy+360);
-  ctx.fillText("Blood.",fx+55,fy+402);
-  drawHeart(fx+185,fy+385,40);
-
-  // Photo.
-  const px=fx+220, py=fy+190, pw=270, ph=300;
-  roundRect(px,py,pw,ph,20,"#dcecff","#123b82",3);
-  if(photo){
-    ctx.save();ctx.beginPath();ctx.roundRect(px+4,py+4,pw-8,ph-8,17);ctx.clip();
-    const s=Math.max((pw-8)/photo.width,(ph-8)/photo.height);
-    const dw=photo.width*s,dh=photo.height*s;
-    ctx.drawImage(photo,px+pw/2-dw/2,py+ph/2-dh/2,dw,dh);
+  if (logo) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(120,108,62,0,Math.PI*2);
+    ctx.clip();
+    ctx.drawImage(logo,58,46,124,124);
     ctx.restore();
-  }else{
-    ctx.fillStyle="#cfe2f7";ctx.fillRect(px+4,py+4,pw-8,ph-8);
-    ctx.fillStyle="#123b82";ctx.font=`800 82px ${fontFamily}`;ctx.textAlign="center";
-    ctx.fillText(name.split(/\s+/).slice(0,2).map(v=>v[0]).join("").toUpperCase(),px+pw/2,py+180);
-    ctx.textAlign="left";
   }
 
-  // Blood group.
-  roundRect(fx+525,fy+295,135,68,22,"#e31b23",null);
-  ctx.fillStyle="#fff";ctx.font=`900 38px ${fontFamily}`;ctx.textAlign="center";ctx.fillText(blood,fx+592,fy+341);ctx.textAlign="left";
-  drawHeartDrop(fx+595,fy+410,.65);
-  ctx.strokeStyle="#e31b23";ctx.lineWidth=4;
-  ctx.beginPath();ctx.moveTo(fx+535,fy+435);ctx.lineTo(fx+565,fy+435);ctx.lineTo(fx+580,fy+412);ctx.lineTo(fx+600,fy+458);ctx.lineTo(fx+620,fy+428);ctx.lineTo(fx+662,fy+428);ctx.stroke();
+  ctx.fillStyle="#fff";
+  ctx.font=`800 ${ta ? 32 : 38}px ${fontFamily}`;
+  ctx.fillText(t.club1,215,88);
+  ctx.fillStyle="#ffec3d";
+  ctx.font=`800 ${ta ? 21 : 26}px ${fontFamily}`;
+  ctx.fillText(t.club2,215,128);
+  ctx.fillStyle="#fff";
+  ctx.font=`700 17px ${fontFamily}`;
+  ctx.fillText("DONATE  |  SUPPORT  |  SAVE LIVES",215,158);
 
-  // Donor name.
+  drawHeartDrop(1085,104,1.05);
+
+  await drawPhoto(photo);
+
   ctx.fillStyle="#123b82";
-  ctx.font=`900 ${fitText(name,610,36,900)}px ${fontFamily}`;
-  ctx.textAlign="center";ctx.fillText(name,fx+352,fy+525);
-  roundRect(fx+180,fy+545,345,48,24,"#e31b23",null);
-  ctx.fillStyle="#fff";ctx.font=`900 20px ${fontFamily}`;ctx.fillText(t.donor,fx+352,fy+576);
+  ctx.font=`800 ${fitText(name,700,44,800)}px ${fontFamily}`;
+  ctx.fillText(name,420,270);
+
+  rr(420,292,270,58,29,"#e31b23",null);
+  ctx.fillStyle="#fff";
+  ctx.font=`800 ${ta ? 23 : 27}px ${fontFamily}`;
+  ctx.textAlign="center";
+  ctx.fillText(t.donor,555,329);
   ctx.textAlign="left";
 
-  // Details.
+  rr(710,292,170,58,29,"#123b82",null);
+  ctx.fillStyle="#fff";
+  ctx.font=`800 35px ${fontFamily}`;
+  ctx.textAlign="center";
+  ctx.fillText(blood,795,331);
+  ctx.textAlign="left";
+
   const location=[city,district].filter(Boolean).join(", ") || "—";
   const fields=[
-    ["id",t.id,donorId],
-    ["drop",t.blood,blood],
-    ["phone",t.mobile,mobile],
-    ["pin",t.location,location],
-    ["calendar",t.dob,dob||"—"],
-    ["drop",t.lastDonation,lastDonation||"—"]
+    [t.id,donorId],
+    [t.mobile,mobile],
+    [t.dob,dob || "—"],
+    [t.location,location],
+    [t.lastDonation,lastDonation || "—"]
   ];
-  let rowY=625;
-  fields.forEach((f,i)=>{
-    drawMiniIcon(fx+62,rowY-6,f[0],i===1?"#e31b23":"#123b82");
-    ctx.fillStyle="#123b82";ctx.font=`700 17px ${fontFamily}`;ctx.fillText(f[1],fx+88,rowY);
-    ctx.fillStyle="#52657c";ctx.font=`800 17px ${fontFamily}`;ctx.fillText(":",fx+245,rowY);
-    ctx.fillStyle=i===1?"#e31b23":"#172033";
-    ctx.font=`800 ${fitText(String(f[2]),285,18,800)}px ${fontFamily}`;
-    ctx.fillText(String(f[2]),fx+268,rowY);
-    rowY+=43;
+
+  let fy=390;
+  fields.forEach(([label,val],i)=>{
+    drawIconCircle(405,fy-7,["ID","☎","D","⌖","♥"][i],i===4?"#e31b23":"#123b82");
+    ctx.fillStyle="#52657c";
+    ctx.font=`700 ${ta ? 16 : 18}px ${fontFamily}`;
+    ctx.fillText(label,450,fy);
+    ctx.fillStyle="#172033";
+    ctx.font=`700 ${fitText(String(val||"—"),410,22,700)}px ${fontFamily}`;
+    ctx.fillText(String(val||"—"),640,fy);
+    ctx.strokeStyle="#e1e8f0";
+    ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.moveTo(450,fy+18);
+    ctx.lineTo(885,fy+18);
+    ctx.stroke();
+    fy+=56;
   });
 
-  // QR.
-  roundRect(fx+520,fy+625,150,170,18,"#fff","#e31b23",3);
-  const profileUrl="https://poongurichinanbargal.github.io/blood-donationapp/?donor="+encodeURIComponent(donorId);
-  const qrOk=await drawQR(ctx,profileUrl,fx+542,fy+646,105);
-  ctx.fillStyle="#123b82";ctx.font=`900 12px ${fontFamily}`;ctx.textAlign="center";
-  ctx.fillText(qrOk?t.scan:"QR unavailable",fx+595,fy+785);ctx.textAlign="left";
+  // QR panel — only donor profile URL is encoded.
+  rr(920,375,210,270,22,"#f7fbff","#dbe6f2",3);
+  const profileUrl =
+    "https://poongurichinanbargal.github.io/blood-donationapp/?donor=" +
+    encodeURIComponent(donorId);
+  const qrOk = await drawPNBDCQROnCanvas(ctx,940,400,165);
+  if (!qrOk) {
+    ctx.fillStyle="#123b82";
+    ctx.font=`700 18px ${fontFamily}`;
+    ctx.textAlign="center";
+    ctx.fillText("QR unavailable",1025,490);
+    ctx.textAlign="left";
+  }
+  ctx.fillStyle="#123b82";
+  ctx.font=`800 15px ${fontFamily}`;
+  ctx.textAlign="center";
+  ctx.fillText(t.scan,1025,605);
+  ctx.textAlign="left";
 
-  // Front wave footer.
-  ctx.save();ctx.beginPath();ctx.roundRect(fx,fy+835,CARD_W,117,0);ctx.clip();
+  // Front footer.
   ctx.fillStyle="#e31b23";
-  ctx.beginPath();ctx.moveTo(fx,fy+865);ctx.quadraticCurveTo(fx+220,fy+820,fx+430,fy+870);ctx.quadraticCurveTo(fx+590,fy+905,fx+CARD_W,fy+850);ctx.lineTo(fx+CARD_W,fy+952);ctx.lineTo(fx,fy+952);ctx.closePath();ctx.fill();
-  ctx.fillStyle="#b4000d";
-  ctx.beginPath();ctx.moveTo(fx,fy+915);ctx.quadraticCurveTo(fx+220,fy+865,fx+420,fy+920);ctx.quadraticCurveTo(fx+580,fy+955,fx+CARD_W,fy+900);ctx.lineTo(fx+CARD_W,fy+952);ctx.lineTo(fx,fy+952);ctx.closePath();ctx.fill();
-  ctx.restore();
-  ctx.fillStyle="#fff";ctx.font=`800 18px ${fontFamily}`;
-  ctx.fillText("SAFE BLOOD",fx+80,fy+920);
-  ctx.font=`600 italic 18px Georgia,serif`;ctx.fillText("Stronger Communities",fx+80,fy+944);
-  ctx.font=`900 17px ${fontFamily}`;ctx.textAlign="right";ctx.fillText("TOGETHER WE SAVE LIVES",fx+CARD_W-40,fy+935);ctx.textAlign="left";
+  ctx.beginPath();
+  ctx.moveTo(30,670);
+  ctx.quadraticCurveTo(350,625,650,680);
+  ctx.quadraticCurveTo(920,720,1170,655);
+  ctx.lineTo(1170,730); ctx.lineTo(30,730); ctx.closePath(); ctx.fill();
+  ctx.fillStyle="#fff";
+  ctx.font=`700 21px ${fontFamily}`;
+  ctx.fillText("SAFE BLOOD  •  STRONGER COMMUNITIES",70,704);
+  ctx.font=`800 21px ${fontFamily}`;
+  ctx.textAlign="right";
+  ctx.fillText("TOGETHER WE SAVE LIVES",1125,704);
+  ctx.textAlign="left";
 
   // ============================================================
   // BACK
   // ============================================================
-  const bx=RIGHT, by=TOP;
+  const by=CARD_H+GAP;
+  rr(30,by+30,1140,CARD_H-60,34,"#ffffff","#cad7e7",4);
 
-  // Blue header.
-  ctx.save();ctx.beginPath();ctx.roundRect(bx,by,CARD_W,235,32);ctx.clip();
-  const bh=ctx.createLinearGradient(bx,by,bx+CARD_W,by+235);
-  bh.addColorStop(0,"#0d428d");bh.addColorStop(.65,"#075fc4");bh.addColorStop(1,"#123b82");
-  ctx.fillStyle=bh;ctx.fillRect(bx,by,CARD_W,235);
-  ctx.fillStyle="rgba(255,255,255,.14)";
-  ctx.beginPath();ctx.arc(bx+600,by+20,250,0,Math.PI*2);ctx.fill();
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(30,by+30,1140,155,34);
+  ctx.clip();
+  ctx.fillStyle="#123b82";
+  ctx.fillRect(30,by+30,1140,155);
+  ctx.fillStyle="#0a63ce";
+  ctx.beginPath();
+  ctx.moveTo(760,by+30); ctx.lineTo(1170,by+30); ctx.lineTo(1170,by+145); ctx.lineTo(900,by+185); ctx.closePath(); ctx.fill();
   ctx.restore();
 
-  if(logo){
-    ctx.save();ctx.beginPath();ctx.arc(bx+105,by+105,82,0,Math.PI*2);ctx.clip();
-    ctx.drawImage(logo,bx+23,by+23,164,164);ctx.restore();
+  if (logo) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(120,by+108,62,0,Math.PI*2);
+    ctx.clip();
+    ctx.drawImage(logo,58,by+46,124,124);
+    ctx.restore();
   }
 
-  ctx.fillStyle="#fff";ctx.font=`800 ${ta?32:38}px ${fontFamily}`;ctx.fillText(t.club1,bx+190,by+84);
-  ctx.fillStyle="#ffec3d";ctx.font=`800 ${ta?23:29}px ${fontFamily}`;ctx.fillText(t.club2,bx+190,by+125);
-  ctx.strokeStyle="#fff";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(bx+190,by+143);ctx.lineTo(bx+555,by+143);ctx.stroke();
-  ctx.fillStyle="#fff";ctx.font=`700 16px ${fontFamily}`;ctx.fillText("DONATE  |  SUPPORT  |  SAVE LIVES",bx+190,by+170);
-  drawHeartDrop(bx+625,by+90,1.0);
+  ctx.fillStyle="#fff";
+  ctx.font=`800 ${ta ? 32 : 38}px ${fontFamily}`;
+  ctx.fillText(t.club1,215,by+88);
+  ctx.fillStyle="#ffec3d";
+  ctx.font=`800 ${ta ? 21 : 26}px ${fontFamily}`;
+  ctx.fillText(t.club2,215,by+128);
+  ctx.fillStyle="#fff";
+  ctx.font=`700 17px ${fontFamily}`;
+  ctx.fillText("DONATE  |  SUPPORT  |  SAVE LIVES",215,by+158);
 
-  // I PLEDGE.
-  roundRect(bx+150,by+205,405,50,25,"#e31b23",null);
-  ctx.fillStyle="#fff";ctx.font=`900 25px ${fontFamily}`;ctx.textAlign="center";ctx.fillText(t.pledge,bx+352,by+239);ctx.textAlign="left";
+  drawHeartDrop(1085,by+104,1.05);
 
-  // Four pledge columns.
+  rr(330,by+205,540,64,32,"#e31b23",null);
+  ctx.fillStyle="#fff";
+  ctx.font=`800 ${ta ? 27 : 34}px ${fontFamily}`;
+  ctx.textAlign="center";
+  ctx.fillText(t.pledge,600,by+247);
+  ctx.textAlign="left";
+
   const pledgeItems=[
-    ["drop",t.regular],
-    ["phone",t.patients],
-    ["heart",t.community],
-    ["heart",t.awareness]
+    ["♥",t.pledge1],
+    ["+",t.pledge2],
+    ["♥",t.pledge3],
+    ["✓",t.pledge4]
   ];
-  const pCenters=[bx+100,bx+270,bx+440,bx+610];
-  pledgeItems.forEach((p,i)=>{
-    const cx=pCenters[i];
-    if(p[0]==="drop") drawHeartDrop(cx,by+300,.48);
-    else if(p[0]==="heart") drawHeart(cx,by+300,54);
-    else drawMiniIcon(cx,by+300,"phone","#e31b23");
-    ctx.fillStyle="#123b82";ctx.font=`800 16px ${fontFamily}`;ctx.textAlign="center";
-    const words=String(p[1]).split(" ");
+  pledgeItems.forEach((item,i)=>{
+    const x=165+i*280;
+    drawIconCircle(x,by+330,item[0],"#e31b23");
+    ctx.fillStyle="#123b82";
+    ctx.font=`700 ${ta ? 15 : 18}px ${fontFamily}`;
+    ctx.textAlign="center";
+    const words=item[1].split(" ");
     if(words.length>2){
-      ctx.fillText(words.slice(0,2).join(" "),cx,by+350);
-      ctx.fillText(words.slice(2).join(" "),cx,by+372);
-    }else ctx.fillText(p[1],cx,by+355);
+      ctx.fillText(words.slice(0,2).join(" "),x,by+380);
+      ctx.fillText(words.slice(2).join(" "),x,by+405);
+    } else {
+      ctx.fillText(item[1],x,by+388);
+    }
     ctx.textAlign="left";
-    if(i<3){ctx.strokeStyle="#35a7ff";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx+84,by+265);ctx.lineTo(cx+84,by+390);ctx.stroke();}
+    if(i<3){
+      ctx.strokeStyle="#b9cbe0";
+      ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(x+110,by+300); ctx.lineTo(x+110,by+425); ctx.stroke();
+    }
   });
 
-  // Important information.
-  roundRect(bx+32,by+390,640,220,22,"#edf6ff","#d7e8f8",2);
-  roundRect(bx+52,by+408,350,48,24,"#0c73d9",null);
-  ctx.fillStyle="#fff";ctx.font=`900 23px ${fontFamily}`;ctx.fillText(t.important,bx+80,by+440);
-
-  const bullets=ta?[
+  rr(70,by+440,1060,135,20,"#edf5ff","#d8e6f5",2);
+  ctx.fillStyle="#123b82";
+  ctx.font=`800 ${ta ? 22 : 27}px ${fontFamily}`;
+  ctx.fillText(t.important,100,by+480);
+  ctx.fillStyle="#172033";
+  ctx.font=`600 17px ${fontFamily}`;
+  const bullets=ta ? [
     "இந்த அட்டை பதிவு செய்யப்பட்ட தன்னார்வ இரத்த தான நன்கொடையாளரை அடையாளப்படுத்துகிறது.",
     "இது மருத்துவ அட்டை அல்ல.",
     "அவசரநிலையில் கீழே உள்ள PNBDC உதவி எண்ணை தொடர்பு கொள்ளவும்.",
-    "ஒவ்வொரு இரத்த தானத்திற்குப் பிறகும் பதிவை புதுப்பிக்கவும்."
-  ]:[
-    "This card identifies the holder as a registered voluntary",
-    "blood donor of Poongurichi Nanbargal Blood Donor’s Club.",
+    "ஒவ்வொரு இரத்த தானத்திற்குப் பிறகும் உங்கள் பதிவை புதுப்பிக்கவும்."
+  ] : [
+    "This card identifies the holder as a registered voluntary blood donor.",
     "This card is not a medical card.",
-    "In an emergency, please contact the number below.",
-    "Please inform us after each donation to keep your record updated."
+    "In an emergency, please contact the PNBDC helpline below.",
+    "Please update your donation record after each donation."
   ];
-  let iy=490;
   bullets.forEach((b,i)=>{
-    drawHeartDrop(bx+70,by+iy-7,.20);
-    ctx.fillStyle="#123b82";ctx.font=`600 14px ${fontFamily}`;ctx.fillText(b,bx+94,by+iy);
-    iy+=26;
+    ctx.fillStyle="#e31b23";
+    ctx.font=`800 18px ${fontFamily}`;
+    ctx.fillText("♥",105,by+512+i*22);
+    ctx.fillStyle="#172033";
+    ctx.font=`600 16px ${fontFamily}`;
+    ctx.fillText(b,135,by+512+i*22);
   });
 
   // Emergency contact.
-  roundRect(bx+32,by+630,640,86,20,"#ffe8eb",null);
-  ctx.fillStyle="#e31b23";ctx.beginPath();ctx.arc(bx+82,by+673,31,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle="#fff";ctx.font=`800 27px ${fontFamily}`;ctx.textAlign="center";ctx.fillText("☎",bx+82,by+682);ctx.textAlign="left";
-  ctx.fillStyle="#e31b23";ctx.font=`900 18px ${fontFamily}`;ctx.fillText(t.emergency,bx+125,by+660);
-  ctx.fillStyle="#172033";ctx.font=`800 18px ${fontFamily}`;ctx.fillText(`${t.helpline} : 97507 85555`,bx+125,by+690);
+  rr(70,by+595,1060,78,20,"#ffe7e9",null);
+  drawIconCircle(115,by+634,"☎","#e31b23");
+  ctx.fillStyle="#e31b23";
+  ctx.font=`800 21px ${fontFamily}`;
+  ctx.fillText(t.emergency,165,by+628);
+  ctx.fillStyle="#172033";
+  ctx.font=`800 24px ${fontFamily}`;
+  ctx.fillText(`${t.helpline} : 97507 85555`,165,by+657);
 
-  // Quote + heart/ECG.
-  ctx.fillStyle="#123b82";ctx.font=`700 italic 23px Georgia,serif`;
-  ctx.fillText("“A small act of kindness",bx+45,by+765);
-  ctx.fillText("can save a precious life.”",bx+72,by+797);
-  ctx.strokeStyle="#e31b23";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(bx+105,by+812);ctx.quadraticCurveTo(bx+175,by+790,bx+255,by+812);ctx.stroke();
-  drawHeart(bx+515,by+770,75);
-  drawHeartDrop(bx+590,by+790,.65);
-  ctx.fillStyle="#e31b23";ctx.font=`900 18px ${fontFamily}`;ctx.fillText("DONATE",bx+620,by+760);ctx.fillText("BLOOD",bx+620,by+783);ctx.fillText("SAVE LIFE",bx+620,by+806);
-
-  // Back footer.
-  ctx.fillStyle="#123b82";ctx.fillRect(bx,by+850,CARD_W,102);
-  ctx.fillStyle="#fff";ctx.font=`900 20px ${fontFamily}`;ctx.textAlign="center";ctx.fillText(t.footer,bx+352,by+886);
-  ctx.font=`700 14px ${fontFamily}`;ctx.fillText("Poongurichi, Tamil Nadu, India",bx+352,by+915);
-  ctx.font=`900 14px ${fontFamily}`;ctx.fillText("SAFE BLOOD  •  STRONGER COMMUNITIES  •  TOGETHER WE SAVE LIVES",bx+352,by+940);
+  // Back footer: specifically requested.
+  ctx.fillStyle="#123b82";
+  ctx.fillRect(30,by+680,1140,50);
+  ctx.fillStyle="#fff";
+  ctx.font=`800 22px ${fontFamily}`;
+  ctx.textAlign="center";
+  ctx.fillText(t.footer,600,by+713);
   ctx.textAlign="left";
 
+  // Return a single mobile-friendly PNG containing front + back.
   return await new Promise((resolve,reject)=>{
     canvas.toBlob(
       blob=>blob ? resolve(blob) : reject(new Error("Could not create ID card PNG.")),
-      "image/png",1
+      "image/png",
+      1
     );
   });
 }
