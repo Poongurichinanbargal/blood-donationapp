@@ -148,6 +148,18 @@
 }
 </style>
 
+
+<style id="pnbdc-id-card-mobile-preview">
+  #pnMyIdPreview{width:100%;min-width:0;}
+  #pnMyIdPreviewImage{display:block;width:100%;max-width:100%;height:auto;}
+  @media (max-width:600px){
+    #pnMyIdPreview{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;scrollbar-width:none;border-radius:16px;background:#edf3f9;}
+    #pnMyIdPreview::-webkit-scrollbar{display:none;}
+    #pnMyIdPreviewImage{width:200% !important;max-width:none !important;height:auto !important;border-radius:0 !important;display:block;}
+    #pnMyIdPreview::after{content:"Swipe left / right to view Front & Back";display:block;position:sticky;left:0;bottom:0;width:100%;box-sizing:border-box;padding:8px 10px;margin-top:-36px;pointer-events:none;text-align:center;font:700 11px/1.2 Arial,sans-serif;color:#123b82;background:rgba(255,255,255,.9);}
+  }
+</style>
+
 </head>
 
 
@@ -4310,11 +4322,18 @@ async function createProfessionalDonorIdCard(donor) {
     ctx.save(); ctx.translate(x,y); ctx.scale(scale,scale);
     ctx.fillStyle="#e91b23";
     ctx.beginPath();
-    ctx.moveTo(0,-48);
-    ctx.bezierCurveTo(-38,-10,-38,22,0,46);
-    ctx.bezierCurveTo(38,22,38,-10,0,-48);
+    // Sharp teardrop: pointed top + smooth rounded lower body.
+    ctx.moveTo(0,-52);
+    ctx.bezierCurveTo(-22,-31,-31,-8,-30,13);
+    ctx.bezierCurveTo(-29,36,-15,50,0,54);
+    ctx.bezierCurveTo(15,50,29,36,30,13);
+    ctx.bezierCurveTo(31,-8,22,-31,0,-52);
+    ctx.closePath();
     ctx.fill();
-    ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(-8,-20,6,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="#fff";
+    ctx.beginPath();
+    ctx.arc(-8,-22,5.5,0,Math.PI*2);
+    ctx.fill();
     ctx.restore();
   };
 
