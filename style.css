@@ -4240,184 +4240,49 @@ main,
   }
 }
 
+
 /* =========================================================
-   PNBDC MOBILE MENU — PREMIUM LIST STYLE V1
-   Clean mobile menu: no pill-shaped buttons, compact rows,
-   better hierarchy and touch targets.
+   PNBDC MOBILE HERO — HEART / RED DROP ALIGNMENT FIX
+   Targeted visual correction only. No app logic changes.
    ========================================================= */
-@media (max-width: 850px) {
-  .mobile-menu-panel {
-    left: 14px !important;
-    right: auto !important;
-    width: min(340px, calc(100vw - 28px)) !important;
-    max-width: calc(100vw - 28px) !important;
-    max-height: calc(100dvh - 98px) !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    padding: 8px !important;
-    border-radius: 24px !important;
-    background: rgba(255,255,255,.96) !important;
-    border: 1px solid rgba(255,255,255,.95) !important;
-    box-shadow: 0 22px 60px rgba(16,42,86,.22) !important;
-    -webkit-backdrop-filter: blur(24px) !important;
-    backdrop-filter: blur(24px) !important;
+@media (max-width: 600px){
+  #page-home .pn2-hero-art{
+    position:relative!important;
+    min-height:205px!important;
+    overflow:hidden!important;
   }
 
-  .mobile-menu-title {
-    min-height: 50px !important;
-    padding: 7px 8px 7px 12px !important;
-    margin-bottom: 2px !important;
-    border-bottom: 1px solid rgba(16,42,86,.08) !important;
+  /* Move the red heart/drop slightly toward the visual centre
+     and upward so it no longer sits too far left/low. */
+  #page-home .pn2-drop{
+    right:24%!important;
+    top:5%!important;
+    width:108px!important;
+    height:134px!important;
+    transform:rotate(45deg)!important;
   }
 
-  .mobile-menu-title strong {
-    font-size: 18px !important;
-    letter-spacing: -.25px !important;
+  #page-home .pn2-drop span{
+    font-size:31px!important;
   }
 
-  .mobile-menu-title button {
-    width: 36px !important;
-    height: 36px !important;
-    border-radius: 12px !important;
-    font-size: 23px !important;
-    background: #f3f6fb !important;
-  }
-
-  .mobile-menu-grid {
-    display: grid !important;
-    grid-template-columns: 1fr !important;
-    gap: 2px !important;
-    padding: 5px 3px 8px !important;
-  }
-
-  .mobile-menu-grid button {
-    width: 100% !important;
-    min-height: 46px !important;
-    height: 46px !important;
-    display: flex !important;
-    align-items: center !important;
-    gap: 12px !important;
-    padding: 5px 10px !important;
-    border: 0 !important;
-    border-radius: 13px !important;
-    background: transparent !important;
-    color: #102a56 !important;
-    box-shadow: none !important;
-    text-align: left !important;
-    -webkit-appearance: none !important;
-    appearance: none !important;
-  }
-
-  .mobile-menu-grid button:hover,
-  .mobile-menu-grid button:focus-visible,
-  .mobile-menu-grid button:active {
-    background: #eef5ff !important;
-    outline: none !important;
-  }
-
-  .mobile-menu-grid button span {
-    width: 34px !important;
-    height: 34px !important;
-    flex: 0 0 34px !important;
-    display: grid !important;
-    place-items: center !important;
-    border-radius: 11px !important;
-    background: #f0f5ff !important;
-    font-size: 18px !important;
-    line-height: 1 !important;
-  }
-
-  .mobile-menu-grid button b {
-    display: block !important;
-    flex: 1 1 auto !important;
-    min-width: 0 !important;
-    font-size: 14px !important;
-    line-height: 1.15 !important;
-    font-weight: 750 !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-  }
-
-  .mobile-menu-grid button:nth-child(5),
-  .mobile-menu-grid button:nth-child(8) {
-    margin-top: 5px !important;
-    border-top: 1px solid rgba(16,42,86,.07) !important;
-    padding-top: 10px !important;
-    height: 51px !important;
-  }
-
-  .mobile-language-row {
-    margin: 2px 3px 7px !important;
-    padding: 8px 9px !important;
-    border-radius: 15px !important;
-    background: #f6f8fc !important;
-  }
-
-  .mobile-language-label {
-    display: block !important;
-    margin-bottom: 6px !important;
-    color: #64748b !important;
-    font-size: 11px !important;
-    font-weight: 700 !important;
-  }
-
-  .mobile-language-buttons {
-    display: flex !important;
-    gap: 7px !important;
-  }
-
-  .mobile-language-buttons button {
-    min-height: 34px !important;
-    padding: 5px 11px !important;
-    border: 1px solid rgba(16,42,86,.08) !important;
-    border-radius: 10px !important;
-    background: #fff !important;
-    color: #102a56 !important;
-    font-size: 12px !important;
-    font-weight: 700 !important;
-  }
-
-  .mobile-menu-admin {
-    min-height: 48px !important;
-    margin: 4px 3px !important;
-    width: calc(100% - 6px) !important;
-    padding: 6px 10px !important;
-    border: 1px solid rgba(16,42,86,.06) !important;
-    border-radius: 14px !important;
-    background: #f4f7fc !important;
-    color: #102a56 !important;
-    font-size: 14px !important;
-    font-weight: 750 !important;
-    box-shadow: none !important;
-  }
-
-  .mobile-menu-admin:hover,
-  .mobile-menu-admin:active {
-    background: #eaf1ff !important;
-  }
-
-  .mobile-menu-admin-icon {
-    width: 34px !important;
-    height: 34px !important;
-    border-radius: 10px !important;
-    font-size: 18px !important;
+  /* Keep the 24/7 card anchored cleanly to the lower-left
+     without covering the heart/drop excessively. */
+  #page-home .pn2-mini-bottom{
+    left:3%!important;
+    bottom:2%!important;
   }
 }
 
-@media (max-width: 390px) {
-  .mobile-menu-panel {
-    width: min(328px, calc(100vw - 20px)) !important;
-    max-width: calc(100vw - 20px) !important;
-    left: 10px !important;
+@media (max-width:380px){
+  #page-home .pn2-drop{
+    right:22%!important;
+    top:5%!important;
+    width:100px!important;
+    height:124px!important;
   }
-
-  .mobile-menu-grid button {
-    min-height: 44px !important;
-    height: 44px !important;
-  }
-
-  .mobile-menu-grid button b {
-    font-size: 13px !important;
+  #page-home .pn2-mini-bottom{
+    left:2%!important;
+    bottom:1%!important;
   }
 }
